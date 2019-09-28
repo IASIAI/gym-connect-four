@@ -25,7 +25,7 @@ for episode in range(EPISODES):
 
         new_state, reward, done, _ = env.step(action)
 
-        player.learn(new_state, action, reward, done)
+        player.learn(state, action, reward, new_state, done)
 
         if done:
             print(f"\nepisode: {episode}")

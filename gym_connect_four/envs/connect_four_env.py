@@ -17,7 +17,7 @@ class Player(ABC):
     def get_next_action(self, state: np.ndarray) -> int:
         pass
 
-    def learn(self, state, action, reward, done) -> None:
+    def learn(self, state, action, state_next, reward, done) -> None:
         pass
 
 
