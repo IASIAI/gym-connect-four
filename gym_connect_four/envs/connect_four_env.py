@@ -211,3 +211,6 @@ class ConnectFourEnv(gym.Env):
             return self.LOSS_REWARD
 
         return 0
+
+    def available_moves(self):
+        return [i for i in range(self.board_shape[1]) if self.is_valid_action(i)]

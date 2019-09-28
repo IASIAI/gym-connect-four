@@ -38,6 +38,34 @@ BOARD_WIN_BDIAGONAL = [[0, 0, 0, 0, 0, 0, 0],
                        [-1, 1, -1, -1, 0, -1, -1],
                        [1, 1, -1, 1, -1, 1, 1]]
 
+BOARD_AVAILABLE_0123 = [[0, 0, 0, 0, -1, 1, -1],
+                        [0, 0, 0, 1, 1, -1, 1],
+                        [0, 0, -1, 1, 1, -1, -1],
+                        [0, 0, 1, 1, 1, 1, 1],
+                        [-1, 1, -1, -1, -1, -1, -1],
+                        [1, 1, -1, 1, -1, 1, 1]]
+
+BOARD_AVAILABLE_2 = [[1, 1, 0, -1, -1, 1, -1],
+                     [1, 1, -1, 1, 1, -1, 1],
+                     [1, 1, -1, 1, 1, -1, -1],
+                     [1, 1, 1, 1, 1, 1, 1],
+                     [-1, 1, -1, -1, -1, -1, -1],
+                     [1, 1, -1, 1, -1, 1, 1]]
+
+BOARD_AVAILABLE_6 = [[1, 1, 1, 1, -1, 1, 0],
+                     [1, 1, -1, 1, 1, -1, 1],
+                     [1, 1, -1, 1, 1, -1, -1],
+                     [1, 1, 1, 1, 1, 1, 1],
+                     [-1, 1, -1, -1, -1, -1, -1],
+                     [1, 1, -1, 1, -1, 1, 1]]
+
+BOARD_AVAILABLE_NONE = [[1, 1, 1, 1, -1, 1, 1],
+                        [1, 1, -1, 1, 1, -1, 1],
+                        [1, 1, -1, 1, 1, -1, -1],
+                        [1, 1, 1, 1, 1, 1, 1],
+                        [-1, 1, -1, -1, -1, -1, -1],
+                        [1, 1, -1, 1, -1, 1, 1]]
+
 
 class TestConnectFourEnv(TestCase):
 
@@ -70,3 +98,17 @@ class TestConnectFourEnv(TestCase):
 
         self.env.board = BOARD_WIN_BDIAGONAL
         self.assertTrue(self.env.is_win_state())
+
+    def test_available_moves(self):
+        self.env = gym.make('ConnectFour-v0')
+        self.env.board = BOARD_AVAILABLE_0123
+        self.assertEqual(set(self.env.available_moves()), set([0, 1, 2, 3]))
+
+        self.env.board = BOARD_AVAILABLE_2
+        self.assertEqual(set(self.env.available_moves()), set([2]))
+
+        self.env.board = BOARD_AVAILABLE_6
+        self.assertEqual(set(self.env.available_moves()), set([6]))
+
+        self.env.board = BOARD_AVAILABLE_NONE
+        self.assertEqual(set(self.env.available_moves()), set([]))
