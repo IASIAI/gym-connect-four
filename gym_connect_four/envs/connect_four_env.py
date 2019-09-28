@@ -212,5 +212,5 @@ class ConnectFourEnv(gym.Env):
 
         return 0
 
-    def available_moves(self):
-        return [i for i in range(self.board_shape[1]) if self.is_valid_action(i)]
+    def available_moves(self) -> frozenset:
+        return frozenset((i for i in range(self.board_shape[1]) if self.is_valid_action(i)))
