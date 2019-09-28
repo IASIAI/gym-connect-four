@@ -79,6 +79,9 @@ class ConnectFourEnv(gym.Env):
         self.current_player = 1
         self.board = np.zeros(self.board_shape, dtype=int)
 
+        self.opponent = None
+        self.player_color = None
+
     # def next_player(self, currrent_player: int) -> int:
     #     return (currrent_player + 1) % 2
     #
@@ -91,6 +94,23 @@ class ConnectFourEnv(gym.Env):
     #     return 1
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
+        state, reward, done, _ = self._step(action)
+
+        if done or not self.opponent:
+            return self.board, reward, done, {}
+
+        if self.current_player != self.player_color:
+            # Run step loop again for the opponent player. State will be the board, but reward is the reverse of the
+            # opponent's reward
+            action_opponent = self.opponent.get_next_action(self.board)
+            new_state, new_reward, new_done, _ = self._step(action_opponent)
+            state = new_state
+            reward = self._reverse_reward(new_reward)
+            done = new_done
+
+        return self.board, reward, done, {}
+
+    def _step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         reward = self.DEF_REWARD
         done = False
 
@@ -118,9 +138,17 @@ class ConnectFourEnv(gym.Env):
 
         return self.board, reward, done, {}
 
-    def reset(self) -> np.ndarray:
+    def reset(self, opponent: Player = None, player_color: int = 1) -> np.ndarray:
+        self.opponent = opponent
+        self.player_color = player_color
+
         self.current_player = 1
         self.board = np.zeros(self.board_shape, dtype=int)
+
+        if opponent and self.player_color != self.current_player:
+            action_opponent = self.opponent.get_next_action(self.board)
+            self._step(action_opponent)
+
         return self.board
 
     def render(self, mode: str = 'human', close: bool = False) -> None:
@@ -171,3 +199,15 @@ class ConnectFourEnv(gym.Env):
                         return True
 
         return False
+
+    def _reverse_reward(self, reward):
+        if reward == self.LOSS_REWARD:
+            return self.WIN_REWARD
+        elif reward == self.DEF_REWARD:
+            return self.DEF_REWARD
+        elif reward == self.DRAW_REWARD:
+            return self.DRAW_REWARD
+        elif reward == self.WIN_REWARD:
+            return self.LOSS_REWARD
+
+        return 0
