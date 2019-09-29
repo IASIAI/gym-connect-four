@@ -13,10 +13,10 @@ from keras.optimizers import Adam
 ENV_NAME = "ConnectFour-v0"
 TRAIN_EPISODES = 100
 
-# Vanilla Multi Layer Perceptron version
-
-
 class DQNSolver:
+    """
+    Vanilla Multi Layer Perceptron version
+    """
 
     def __init__(self, observation_space, action_space):
         self.GAMMA = 0.95
@@ -105,9 +105,6 @@ def game():
 
     player = NNPlayer(env, 'NNPlayer')
     opponent = RandomPlayer(env, 'OpponentRandomPlayer')
-
-    # player = RandomPlayer(env, 'OpponentRandomPlayer')
-    # opponent = SavedPlayer(env, name='Dexter', model_prefix='NNPlayer')
 
     total_reward = 0
     wins = 0
