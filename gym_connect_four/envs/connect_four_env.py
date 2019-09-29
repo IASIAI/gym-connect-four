@@ -4,6 +4,7 @@ from typing import Tuple
 import gym
 import numpy as np
 from gym import spaces, logger
+from keras.engine.saving import load_model
 
 
 class Player(ABC):
@@ -30,6 +31,30 @@ class RandomPlayer(Player):
             action = np.random.randint(self.env.action_space.n)
             if self.env.is_valid_action(action):
                 return action
+        raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
+
+
+class SavedPlayer(Player):
+    def __init__(self, env, name='SavedPlayer', model_prefix=None):
+        super(SavedPlayer, self).__init__(env, name)
+
+        if model_prefix is None:
+            model_prefix = self.name
+
+        self.observation_space = env.observation_space.shape
+        self.action_space = env.action_space.n
+
+        self.model = load_model(f"{model_prefix}.h5")
+
+    def get_next_action(self, state: np.ndarray) -> int:
+        state = np.reshape(state, [1] + list(self.observation_space))
+        for _ in range(100):
+            q_values = self.model.predict(state)
+            q_values = np.array([[x if idx in self.env.available_moves() else -10 for idx, x in enumerate(q_values[0])]])
+            action = np.argmax(q_values[0])
+            if self.env.is_valid_action(action):
+                return action
+
         raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
 
 
@@ -81,17 +106,6 @@ class ConnectFourEnv(gym.Env):
 
         self.opponent = None
         self.player_color = None
-
-    # def next_player(self, currrent_player: int) -> int:
-    #     return (currrent_player + 1) % 2
-    #
-    # def play(self, player1: Player, player2: Player) -> int:
-    #     """
-    #     :return: -1 if wins player1, 1 if wins player2, 0 if it's a draw
-    #     """
-    #     players = [player1, player2]
-    #     # ToDo: implement game loop from app.py
-    #     return 1
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         state, reward, done, _ = self._step(action)
