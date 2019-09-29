@@ -11,34 +11,35 @@ from keras.models import Sequential
 from keras.optimizers import Adam
 
 ENV_NAME = "ConnectFour-v0"
+TRAIN_EPISODES = 100
 
-GAMMA = 0.95
-LEARNING_RATE = 0.001
-
-MEMORY_SIZE = 1000000
-BATCH_SIZE = 20
-
-EXPLORATION_MAX = 1.0
-EXPLORATION_MIN = 0.01
-EXPLORATION_DECAY = 0.995
-
-# Vanilla Multi Layer Perceptron version that starts converging to solution after ~50 runs
+# Vanilla Multi Layer Perceptron version
 
 
 class DQNSolver:
 
     def __init__(self, observation_space, action_space):
-        self.exploration_rate = EXPLORATION_MAX
+        self.GAMMA = 0.95
+        self.LEARNING_RATE = 0.001
+
+        self.MEMORY_SIZE = 1000000
+        self.BATCH_SIZE = 20
+
+        self.EXPLORATION_MAX = 1.0
+        self.EXPLORATION_MIN = 0.01
+        self.EXPLORATION_DECAY = 0.995
+
+        self.exploration_rate = self.EXPLORATION_MAX
 
         self.action_space = action_space
-        self.memory = deque(maxlen=MEMORY_SIZE)
+        self.memory = deque(maxlen=self.MEMORY_SIZE)
 
         self.model = Sequential()
         self.model.add(Flatten(input_shape=observation_space))
         self.model.add(Dense(24, activation="relu"))
         self.model.add(Dense(24, activation="relu"))
         self.model.add(Dense(self.action_space, activation="linear"))
-        self.model.compile(loss="mse", optimizer=Adam(lr=LEARNING_RATE))
+        self.model.compile(loss="mse", optimizer=Adam(lr=self.LEARNING_RATE))
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -51,18 +52,18 @@ class DQNSolver:
         return np.argmax(q_values[0])
 
     def experience_replay(self):
-        if len(self.memory) < BATCH_SIZE:
+        if len(self.memory) < self.BATCH_SIZE:
             return
-        batch = random.sample(self.memory, BATCH_SIZE)
+        batch = random.sample(self.memory, self.BATCH_SIZE)
         for state, action, reward, state_next, terminal in batch:
             q_update = reward
             if not terminal:
-                q_update = (reward + GAMMA * np.amax(self.model.predict(state_next)[0]))
+                q_update = (reward + self.GAMMA * np.amax(self.model.predict(state_next)[0]))
             q_values = self.model.predict(state)
             q_values[0][action] = q_update
             self.model.fit(state, q_values, verbose=0)
-        self.exploration_rate *= EXPLORATION_DECAY
-        self.exploration_rate = max(EXPLORATION_MIN, self.exploration_rate)
+        self.exploration_rate *= self.EXPLORATION_DECAY
+        self.exploration_rate = max(self.EXPLORATION_MIN, self.exploration_rate)
 
     def save_model(self, file_prefix: str):
         self.model.save(f"{file_prefix}.h5")
@@ -149,10 +150,9 @@ def game():
                     print("board state:\n", state)
                     print(f"reward={reward}")
                 print(f"Wins [{wins}], Draws [{draws}], Losses [{losses}] - Total reward {total_reward}, average reward {total_reward/run}")
-                # score_logger.add_score(step, run)
                 break
 
-        if run == 1000:
+        if run == TRAIN_EPISODES:
             if hasattr(player, 'save_model') and callable(player.save_model):
                 player.save_model()
             break
