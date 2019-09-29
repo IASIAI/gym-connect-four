@@ -1,29 +1,78 @@
 from abc import ABC, abstractmethod
+from threading import Lock, Event
 from typing import Tuple
 
 import gym
 import numpy as np
-from gym import spaces, logger
+from gym import spaces
+
+
+class OpponentSyncEnv(gym.Env):
+    """
+    A generic base Environment class for games with 1 opponent and syncronized moves
+    """
+    PLAYERS = {-1, 1}
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._player_events = [Event(), Event()]
+        self._current_player = 1
+        self._player_change_lock = Lock()
+
+    @abstractmethod
+    def is_valid_action(self, action: int) -> bool:
+        ...
+
+    def _get_player_event(self, current_player: int):
+        return self._player_events[(current_player + 1) // 2]
+
+    def _next_player(self):
+        with self._player_change_lock:
+            self._get_player_event(self._current_player).clear()
+            self._current_player *= -1
+            self._get_player_event(self._current_player).set()
+        return self._current_player
+
+    def step_player(self, action: int, player: int):
+        assert player in self.PLAYERS
+
+        self._get_player_event(player).wait()
+        state, reward, done, info = self.step(action)
+        self._next_player()
+        return state, reward, done, info
 
 
 class Player(ABC):
     """ Class used for evaluating the game """
 
-    def __init__(self, env, name='Player'):
+    def __init__(self, env: OpponentSyncEnv, id: int, name='Player'):
         self.name = name
         self.env = env
+        self.id = id
 
     @abstractmethod
-    def get_next_action(self, state: np.ndarray) -> int:
-        pass
+    def train(self, plays: int):
+        ...
+
+    def step(self, action):
+        return self.env.step_player(action, self.id)
 
     def learn(self, state, action, reward, done) -> None:
         pass
 
 
 class RandomPlayer(Player):
-    def __init__(self, env, name='RandomPlayer'):
-        super(RandomPlayer, self).__init__(env, name)
+    def __init__(self, env, id: int, name='RandomPlayer'):
+        super().__init__(env, id, name)
+
+    def train(self, plays: int):
+        for _ in range(plays):
+            while True:
+                action = np.random.randint(self.env.action_space.n)
+                if self.env.is_valid_action(action):
+                    state, reward, done, info = self.step(action)
+                    if done:
+                        break
 
     def get_next_action(self, state: np.ndarray) -> int:
         for _ in range(100):
@@ -33,7 +82,7 @@ class RandomPlayer(Player):
         raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
 
 
-class ConnectFourEnv(gym.Env):
+class ConnectFourEnv(OpponentSyncEnv):
     """
     Description:
         ConnectFour game environment
@@ -76,7 +125,6 @@ class ConnectFourEnv(gym.Env):
         self.observation_space = spaces.Box(low=-1, high=1, shape=board_shape, dtype=int)
         self.action_space = spaces.Discrete(board_shape[1])
 
-        self.current_player = 1
         self.board = np.zeros(self.board_shape, dtype=int)
 
         self.opponent = None
@@ -99,7 +147,7 @@ class ConnectFourEnv(gym.Env):
         if done or not self.opponent:
             return self.board, reward, done, {}
 
-        if self.current_player != self.player_color:
+        if self._current_player != self.player_color:
             # Run step loop again for the opponent player. State will be the board, but reward is the reverse of the
             # opponent's reward
             action_opponent = self.opponent.get_next_action(self.board)
@@ -107,6 +155,33 @@ class ConnectFourEnv(gym.Env):
             state = new_state
             reward = self._reverse_reward(new_reward)
             done = new_done
+
+        return self.board, reward, done, {}
+
+    def _step_player(self, action: int, player: int) -> Tuple[np.ndarray, float, bool, dict]:
+        reward = self.DEF_REWARD
+        done = False
+
+        if not self.is_valid_action(action):
+            print("Invalid action, column is already full")
+            return self.board, self.LOSS_REWARD, True, {}
+        # Check and perform action
+        for index in list(reversed(range(self.board_shape[0]))):
+            if self.board[index][action] == 0:
+                self.board[index][action] = player
+                break
+
+        self._next_player()
+
+        # Check if board is completely filled
+        if np.count_nonzero(self.board[0]) == self.board_shape[1]:
+            reward = self.DRAW_REWARD
+            done = True
+        else:
+            # Check win condition
+            if self.is_win_state():
+                done = True
+                reward = self.WIN_REWARD
 
         return self.board, reward, done, {}
 
@@ -121,10 +196,10 @@ class ConnectFourEnv(gym.Env):
         # Check and perform action
         for index in list(reversed(range(self.board_shape[0]))):
             if self.board[index][action] == 0:
-                self.board[index][action] = self.current_player
+                self.board[index][action] = self._current_player
                 break
 
-        self.current_player *= -1
+        self._current_player *= -1
 
         # Check if board is completely filled
         if np.count_nonzero(self.board[0]) == self.board_shape[1]:
@@ -142,10 +217,10 @@ class ConnectFourEnv(gym.Env):
         self.opponent = opponent
         self.player_color = player_color
 
-        self.current_player = 1
+        self._current_player = 1
         self.board = np.zeros(self.board_shape, dtype=int)
 
-        if opponent and self.player_color != self.current_player:
+        if opponent and self.player_color != self._current_player:
             action_opponent = self.opponent.get_next_action(self.board)
             self._step(action_opponent)
 
