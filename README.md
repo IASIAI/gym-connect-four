@@ -31,7 +31,8 @@ Inside the repo there are a couple of examples:
   
 Considerations for the environment:  
 * the ```reset``` function is the one that assigns the opponent and must be specified each time, unless both players are handled by user (as in sample_two_players)  
-  
+* the environment will throw an exception on invalid move, please use either ```env.is_valid_action(action)``` or pick the move from ```env.available_moves```
+
 ### Assignment  
   
 For the competition the following set of deliverables must be provided:  

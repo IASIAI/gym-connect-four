@@ -129,8 +129,7 @@ class ConnectFourEnv(gym.Env):
         done = False
 
         if not self.is_valid_action(action):
-            print("Invalid action, column is already full")
-            return self.board, self.LOSS_REWARD, True, {}
+            raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
 
         # Check and perform action
         for index in list(reversed(range(self.board_shape[0]))):
