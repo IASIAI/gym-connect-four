@@ -3,14 +3,12 @@ import warnings
 from collections import deque
 
 import gym
-from gym_connect_four import RandomPlayer, ConnectFourEnv, Player
+from gym_connect_four import RandomPlayer, ConnectFourEnv, Player, SavedPlayer
 
 import numpy as np
 from keras.layers import Dense, Flatten
 from keras.models import Sequential
 from keras.optimizers import Adam
-
-# from scores.score_logger import ScoreLogger
 
 ENV_NAME = "ConnectFour-v0"
 
@@ -36,7 +34,6 @@ class DQNSolver:
         self.memory = deque(maxlen=MEMORY_SIZE)
 
         self.model = Sequential()
-        #self.model.add(Flatten(data_format=observation_space))
         self.model.add(Flatten(input_shape=observation_space))
         self.model.add(Dense(24, activation="relu"))
         self.model.add(Dense(24, activation="relu"))
@@ -67,6 +64,9 @@ class DQNSolver:
         self.exploration_rate *= EXPLORATION_DECAY
         self.exploration_rate = max(EXPLORATION_MIN, self.exploration_rate)
 
+    def save_model(self, file_prefix: str):
+        self.model.save(f"{file_prefix}.h5")
+
 
 class NNPlayer(Player):
     def __init__(self, env, name='RandomPlayer'):
@@ -83,9 +83,6 @@ class NNPlayer(Player):
             action = self.dqn_solver.act(state, self.env.available_moves())
             if self.env.is_valid_action(action):
                 return action
-        print("Can't determine next action")
-        print(f"Board is {state}")
-        print(f"My last intended action is {action}")
         raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
 
     def learn(self, state, action, reward, state_next, done) -> None:
@@ -98,12 +95,18 @@ class NNPlayer(Player):
         if not done:
             self.dqn_solver.experience_replay()
 
+    def save_model(self):
+        self.dqn_solver.save_model(self.name)
+
 
 def game():
     env = gym.make(ENV_NAME)
 
     player = NNPlayer(env, 'NNPlayer')
     opponent = RandomPlayer(env, 'OpponentRandomPlayer')
+
+    # player = RandomPlayer(env, 'OpponentRandomPlayer')
+    # opponent = SavedPlayer(env, name='Dexter', model_prefix='NNPlayer')
 
     total_reward = 0
     wins = 0
@@ -127,15 +130,17 @@ def game():
 
             if terminal:
                 total_reward += reward
-                print("Run: " + str(run) + ", exploration: " + str(player.dqn_solver.exploration_rate) + ", score: " + str(reward))
+                print("Run: " + str(run) + ", score: " + str(reward))
+                if hasattr(player, 'dqn_solver'):
+                    print("exploration: " + str(player.dqn_solver.exploration_rate))
                 if reward == 1:
-                    wins +=1
+                    wins += 1
                     print(f"winner: {player.name}")
                     print("board state:\n", state)
                     print(f"reward={reward}")
                 elif reward == env.LOSS_REWARD:
                     losses += 1
-                    print(f"lost to: {opponent.name}")
+                    print(f"lost to: {env.opponent.name}")
                     print("board state:\n", state)
                     print(f"reward={reward}")
                 elif reward == env.DRAW_REWARD:
@@ -146,6 +151,11 @@ def game():
                 print(f"Wins [{wins}], Draws [{draws}], Losses [{losses}] - Total reward {total_reward}, average reward {total_reward/run}")
                 # score_logger.add_score(step, run)
                 break
+
+        if run == 1000:
+            if hasattr(player, 'save_model') and callable(player.save_model):
+                player.save_model()
+            break
 
 
 if __name__ == "__main__":
