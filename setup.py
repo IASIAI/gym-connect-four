@@ -5,5 +5,6 @@ setup(name='gym_connect_four',
       install_requires=['gym>=0.14',
                         'numpy>=1.17',
                         'keras',
+                        'tensorflow',
                         'h5py']
       )
