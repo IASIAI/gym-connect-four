@@ -2,17 +2,18 @@ import argparse
 import sys
 import os.path
 import importlib
+import random
 
 import gym
 from gym_connect_four import RandomPlayer, SavedPlayer
 
 env = gym.make("ConnectFour-v0")
-ROUNDS = 200
+ROUNDS = 50
 
 
 def tournament_player_loader(model: str):
     if model == "random":
-        return RandomPlayer(env, name="RandomPlayer")
+        return RandomPlayer(env, name=f"RandomPlayer{random.randint(1,999)}")
 
     if os.path.exists(f"{model}.py"):
         module = importlib.import_module(model)
@@ -72,10 +73,38 @@ def play_game(player1, player2, rounds=ROUNDS):
                     match_result = 0
 
         # idx0 = Win, idx1 = Draw, idx2 = Loss
-        results[1-match_result] += 1
-        #print(f"{player1.name}:{player2.name}={match_result}")
+        results[1 - match_result] += 1
+        # print(f"{player1.name}:{player2.name}={match_result}")
 
     return results
+
+
+def tournament_print(leaderboard):
+    for item in leaderboard:
+        leaderboard[item][4] = tournament_score(leaderboard[item])
+
+    leaderboard = sorted(leaderboard.items(), reverse=True, key=lambda itm: itm[1][4])
+
+    print("{:6s} {:25s} {:7s} | {:23s} | {:23s} | {:23s} | {:23s}".format("", "", "", "Starter Rounds", "Second Rounds", "Starter matches", "Second matches"))
+
+    print("{:6s} {:25s} {:7s} | {:7s} {:7s} {:7s} | {:7s} {:7s} {:7s} | {:7s} {:7s} {:7s} | {:7s} {:7s} {:7s}".format("Place", "Name", "Score", "Wins", "Draws", "Losses", "Wins", "Draws", "Losses", "Wins", "Draws", "Losses", "Wins", "Draws", "Losses"))
+    idx = 0
+    for item in leaderboard:
+        idx += 1
+        print(
+            "{:6d} {:25s} {:7d} | {:7d} {:7d} {:7d} | {:7d} {:7d} {:7d} | {:7d} {:7d} {:7d} | {:7d} {:7d} {:7d}".
+                format(idx, item[0], item[1][4],
+                       item[1][0][0], item[1][0][1], item[1][0][2],
+                       item[1][1][0], item[1][1][1], item[1][1][2],
+                       item[1][2][0], item[1][2][1], item[1][2][2],
+                       item[1][3][0], item[1][3][1], item[1][3][2]
+                       ))
+    pass
+
+
+def tournament_score(score):
+    # Score = Number of wins -  Number of losses
+    return (score[0][0] - score[0][2]) + (score[1][0] - score[1][2])
 
 
 def tournament(models):
@@ -83,18 +112,39 @@ def tournament(models):
     for model in models:
         players.append(tournament_player_loader(model))
 
-    print("Loaded", len(players),  "players :", ", ".join([player.name for player in players]))
+    print("Loaded", len(players), "players :", ", ".join([player.name for player in players]))
 
     game_list = []
+    leaderboard = {}
+
     for player1 in players:
+        leaderboard[player1.name] = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], 0]
         for player2 in players:
             if player1 == player2:
                 continue
             game_list.append((player1, player2))
 
+    random.shuffle(game_list)
+
     for game in game_list:
         score = play_game(game[0], game[1], ROUNDS)
         print(score)
+
+        p1 = game[0].name
+        p2 = game[1].name
+        leaderboard[p1][0] = [x + y for x, y in zip(leaderboard[p1][0], score)]
+        leaderboard[p2][1] = [x + y for x, y in zip(leaderboard[p2][1], score[::-1])]
+        if score[0] > score[2]:
+            leaderboard[p1][2][0] += 1
+            leaderboard[p2][3][2] += 1
+        elif score[0] == score[2]:
+            leaderboard[p1][2][1] += 1
+            leaderboard[p2][3][1] += 1
+        else:
+            leaderboard[p1][2][2] += 1
+            leaderboard[p2][3][0] += 1
+
+    tournament_print(leaderboard)
 
 
 def main():
