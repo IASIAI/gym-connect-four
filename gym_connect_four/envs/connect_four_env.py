@@ -9,7 +9,6 @@ from keras.engine.saving import load_model
 
 class Player(ABC):
     """ Class used for evaluating the game """
-
     def __init__(self, env, name='Player'):
         self.name = name
         self.env = env
@@ -31,7 +30,9 @@ class RandomPlayer(Player):
             action = np.random.randint(self.env.action_space.n)
             if self.env.is_valid_action(action):
                 return action
-        raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
+        raise Exception(
+            'Unable to determine a valid move! Maybe invoke at the wrong time?'
+        )
 
 
 class SavedPlayer(Player):
@@ -50,12 +51,17 @@ class SavedPlayer(Player):
         state = np.reshape(state, [1] + list(self.observation_space))
         for _ in range(100):
             q_values = self.model.predict(state)
-            q_values = np.array([[x if idx in self.env.available_moves() else -10 for idx, x in enumerate(q_values[0])]])
+            q_values = np.array([[
+                x if idx in self.env.available_moves() else -10
+                for idx, x in enumerate(q_values[0])
+            ]])
             action = np.argmax(q_values[0])
             if self.env.is_valid_action(action):
                 return action
 
-        raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
+        raise Exception(
+            'Unable to determine a valid move! Maybe invoke at the wrong time?'
+        )
 
 
 class ConnectFourEnv(gym.Env):
@@ -98,7 +104,10 @@ class ConnectFourEnv(gym.Env):
 
         self.board_shape = board_shape
 
-        self.observation_space = spaces.Box(low=-1, high=1, shape=board_shape, dtype=int)
+        self.observation_space = spaces.Box(low=-1,
+                                            high=1,
+                                            shape=board_shape,
+                                            dtype=int)
         self.action_space = spaces.Discrete(board_shape[1])
 
         self.current_player = 1
@@ -129,7 +138,9 @@ class ConnectFourEnv(gym.Env):
         done = False
 
         if not self.is_valid_action(action):
-            raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
+            raise Exception(
+                'Unable to determine a valid move! Maybe invoke at the wrong time?'
+            )
 
         # Check and perform action
         for index in list(reversed(range(self.board_shape[0]))):
@@ -151,7 +162,8 @@ class ConnectFourEnv(gym.Env):
 
         return self.board, reward, done, {}
 
-    def reset(self, opponent: Player = None, player_color: int = 1) -> np.ndarray:
+    def reset(self, opponent: Player = None,
+              player_color: int = 1) -> np.ndarray:
         self.opponent = opponent
         self.player_color = player_color
 
@@ -165,7 +177,21 @@ class ConnectFourEnv(gym.Env):
         return self.board
 
     def render(self, mode: str = 'human', close: bool = False) -> None:
-        pass
+        replacements = {
+            self.player_color: 'A',
+            0: ' ',
+            -1 * self.player_color: 'B'
+        }
+
+        def render_line(line):
+            return "|" + "|".join(
+                ["{:>2} ".format(replacements[x]) for x in line]) + "|"
+
+        hline = '|---+---+---+---+---+---+---|'
+        print(hline)
+        for line in np.apply_along_axis(render_line, axis=1, arr=self.board):
+            print(line)
+        print(hline)
 
     def close(self) -> None:
         pass
@@ -226,4 +252,5 @@ class ConnectFourEnv(gym.Env):
         return 0
 
     def available_moves(self) -> frozenset:
-        return frozenset((i for i in range(self.board_shape[1]) if self.is_valid_action(i)))
+        return frozenset(
+            (i for i in range(self.board_shape[1]) if self.is_valid_action(i)))
