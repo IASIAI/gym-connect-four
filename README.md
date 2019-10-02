@@ -42,6 +42,11 @@ For the competition the following set of deliverables must be provided:
   
 ### Evaluation of the assignment  
   
-All supplied models will pitted against each other in a round robbin tournament with the winner being the one that has won the most amount of matches.  
+All supplied models will pitted against each other in a round robbin tournament. Every player will play N (a big number like 1000) rounds with every other player. The formula of the score:
+
+Score = sum( (**#Wins** against *Player<sub>k</sub>*) - (**#Losses** against *Player<sub>k</sub>*) for *k* in *{all_opponents}*)
+
+The draws are not taken into account for score computation.
+The winner is the one having highest score.
   
 ### Have fun and happy training!
