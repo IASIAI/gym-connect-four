@@ -9,6 +9,7 @@ from gym_connect_four import RandomPlayer, SavedPlayer
 
 env = gym.make("ConnectFour-v0")
 ROUNDS = 50
+LEARNING = True
 
 
 def tournament_player_loader(model: str):
@@ -29,6 +30,10 @@ def tournament_player_loader(model: str):
 
 def play_game(player1, player2, rounds=ROUNDS):
     print(f"{player1.name} vs {player2.name}")
+
+    player1.reset()
+    player2.reset()
+
     results = [0] * 3
     for episode in range(rounds):
         match_result = None  # 1 = win, 0 = draw, -1 = loss
@@ -41,7 +46,8 @@ def play_game(player1, player2, rounds=ROUNDS):
             state1, reward1, done1, _ = env.step(action1)
 
             if player2_learn:
-                player2.learn(state1, action2, env._reverse_reward(reward1), state, done1)
+                if LEARNING:
+                    player2.learn(state1, action2, env._reverse_reward(reward1), state, done1)
             else:
                 player2_learn = True
 
@@ -49,11 +55,14 @@ def play_game(player1, player2, rounds=ROUNDS):
                 action2 = player2.get_next_action(state1)
                 state2, reward2, done2, _ = env.step(action2)
 
-                player1.learn(state, action1, env._reverse_reward(reward2), state2, done2)
+                if LEARNING:
+                    player1.learn(state, action1, env._reverse_reward(reward2), state2, done2)
 
                 if done2:
                     done = True
-                    player2.learn(state1, action2, reward2, state2, done2)
+                    if LEARNING:
+                        player2.learn(state1, action2, reward2, state2, done2)
+
                     if reward2 != env.DRAW_REWARD:
                         # player2 Won
                         match_result = -1
@@ -64,7 +73,9 @@ def play_game(player1, player2, rounds=ROUNDS):
                 state = state2
             else:
                 done = True
-                player1.learn(state, action1, reward1, state1, done1)
+                if LEARNING:
+                    player1.learn(state, action1, reward1, state1, done1)
+
                 if reward1 != env.DRAW_REWARD:
                     # player1 Won
                     match_result = 1
@@ -145,6 +156,9 @@ def tournament(models):
             leaderboard[p2][3][0] += 1
 
     tournament_print(leaderboard)
+
+    for player in players:
+        player.save_model()
 
 
 def main():

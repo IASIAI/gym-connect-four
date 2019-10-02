@@ -18,7 +18,16 @@ class Player(ABC):
     def get_next_action(self, state: np.ndarray) -> int:
         pass
 
-    def learn(self, state, action, state_next, reward, done) -> None:
+    def learn(self, state, action: int, state_next, reward: int, done: int) -> None:
+        pass
+
+    def save_model(self, model_prefix: str = None):
+        pass
+
+    def load_model(self, model_prefix: str = None):
+        pass
+
+    def reset(self, episode: int = 0, side: int = 1) -> None:
         pass
 
 
@@ -50,7 +59,8 @@ class SavedPlayer(Player):
         state = np.reshape(state, [1] + list(self.observation_space))
         for _ in range(100):
             q_values = self.model.predict(state)
-            q_values = np.array([[x if idx in self.env.available_moves() else -10 for idx, x in enumerate(q_values[0])]])
+            q_values = np.array(
+                [[x if idx in self.env.available_moves() else -10 for idx, x in enumerate(q_values[0])]])
             action = np.argmax(q_values[0])
             if self.env.is_valid_action(action):
                 return action
