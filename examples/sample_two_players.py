@@ -19,7 +19,9 @@ while not done:
             if env.is_valid_action(action):
                 break
         else:
-            raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
+            raise Exception(
+                'Unable to determine a valid move! Maybe invoke at the wrong time?'
+            )
 
         new_state, reward, done, _ = env.step(action)
 
@@ -29,7 +31,8 @@ while not done:
         if done:
             if reward == 1:
                 print(f"winner: {player.name}")
-                print("board state:\n", new_state)
+                print("board state:")
+                print(env.render())
                 print(f"total reward={total_reward}")
             else:
                 print(f"draw after {player.name} move")
