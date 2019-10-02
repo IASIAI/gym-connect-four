@@ -5,6 +5,9 @@ import gym
 import numpy as np
 from gym import spaces, logger
 from keras.engine.saving import load_model
+import pygame
+from gym_connect_four.envs.render import render_board
+from gym import error
 
 
 class Player(ABC):
@@ -99,7 +102,8 @@ class ConnectFourEnv(gym.Env):
     DRAW_REWARD = 0.5
     WIN_REWARD = 1
 
-    def __init__(self, board_shape=(6, 7)):
+    def __init__(self, board_shape=(6, 7), window_width=512,
+                 window_height=512):
         super(ConnectFourEnv, self).__init__()
 
         self.board_shape = board_shape
@@ -115,6 +119,10 @@ class ConnectFourEnv(gym.Env):
 
         self.opponent = None
         self.player_color = None
+        self.rendered_board = None
+        self.screen = None
+        self.window_width = window_width
+        self.window_height = window_height
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         state, reward, done, _ = self._step(action)
@@ -170,37 +178,65 @@ class ConnectFourEnv(gym.Env):
         self.current_player = 1
         self.board = np.zeros(self.board_shape, dtype=int)
 
+        self._update_board_render()
         if opponent and self.player_color != self.current_player:
             action_opponent = self.opponent.get_next_action(self.board)
             self._step(action_opponent)
 
         return self.board
 
-    def render(self, mode: str = 'human', close: bool = False) -> None:
-        replacements = {
-            self.player_color: 'A',
-            0: ' ',
-            -1 * self.player_color: 'B'
-        }
+    def render(self, mode: str = 'console', close: bool = False) -> None:
+        if mode == 'console':
+            replacements = {
+                self.player_color: 'A',
+                0: ' ',
+                -1 * self.player_color: 'B'
+            }
 
-        def render_line(line):
-            return "|" + "|".join(
-                ["{:>2} ".format(replacements[x]) for x in line]) + "|"
+            def render_line(line):
+                return "|" + "|".join(
+                    ["{:>2} ".format(replacements[x]) for x in line]) + "|"
 
-        hline = '|---+---+---+---+---+---+---|'
-        print(hline)
-        for line in np.apply_along_axis(render_line, axis=1, arr=self.board):
-            print(line)
-        print(hline)
+            hline = '|---+---+---+---+---+---+---|'
+            print(hline)
+            for line in np.apply_along_axis(render_line,
+                                            axis=1,
+                                            arr=self.board):
+                print(line)
+            print(hline)
+
+        elif mode == 'human':
+            if self.screen is None:
+                pygame.init()
+                self.screen = pygame.display.set_mode(
+                    (round(self.window_width), round(self.window_height)))
+
+            if close:
+                pygame.quit()
+
+            self._update_board_render()
+            frame = self.rendered_board
+            surface = pygame.surfarray.make_surface(frame)
+            surface = pygame.transform.rotate(surface, 90)
+            self.screen.blit(surface, (0, 0))
+
+            pygame.display.update()
+        else:
+            raise error.UnsupportedMode()
 
     def close(self) -> None:
-        pass
+        pygame.quit()
 
     def is_valid_action(self, action: int) -> bool:
         if self.board[0][action] == 0:
             return True
 
         return False
+
+    def _update_board_render(self):
+        self.rendered_board = render_board(self.board,
+                                           image_width=self.window_width,
+                                           image_height=self.window_height)
 
     def is_win_state(self) -> bool:
         # Test rows
