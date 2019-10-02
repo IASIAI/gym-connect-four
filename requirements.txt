@@ -1,4 +1,5 @@
-numpy==0.16.1
+numpy==1.17.0
 gym
 scikit-image==0.14.5
 tensorflow>=1.10.0
+keras
