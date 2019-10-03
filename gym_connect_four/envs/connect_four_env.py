@@ -30,6 +30,14 @@ class Player(ABC):
         pass
 
     def reset(self, episode: int = 0, side: int = 1) -> None:
+        """
+        Allows a player class to reset it's state before each round
+
+            Parameters
+            ----------
+            episode : which episode we have reached
+            side : 1 if the player is starting or -1 if the player is second
+        """
         pass
 
 

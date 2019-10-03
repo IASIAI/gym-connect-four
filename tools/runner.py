@@ -32,14 +32,14 @@ def tournament_player_loader(model: str):
 def play_game(player1, player2, rounds=ROUNDS):
     print(f"{player1.name} vs {player2.name}")
 
-    player1.reset()
-    player2.reset()
-
     results = [0] * 3
     for episode in range(rounds):
         match_result = None  # 1 = win, 0 = draw, -1 = loss
 
         state = env.reset()
+        player1.reset(episode, 1)
+        player2.reset(episode, -1)
+
         done = False
         player2_learn = False
         while not done:
