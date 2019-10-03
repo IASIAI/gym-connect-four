@@ -10,6 +10,7 @@ from gym_connect_four import RandomPlayer, SavedPlayer
 env = gym.make("ConnectFour-v0")
 ROUNDS = 50
 LEARNING = True
+DISPLAY_LEADERBOARD_EACH_ROUND = False
 
 
 def tournament_player_loader(model: str):
@@ -85,7 +86,7 @@ def play_game(player1, player2, rounds=ROUNDS):
 
         # idx0 = Win, idx1 = Draw, idx2 = Loss
         results[1 - match_result] += 1
-        # print(f"{player1.name}:{player2.name}={match_result}")
+        print(f"{player1.name}:{player2.name}={results}")
 
     return results
 
@@ -155,7 +156,11 @@ def tournament(models):
             leaderboard[p1][2][2] += 1
             leaderboard[p2][3][0] += 1
 
-    tournament_print(leaderboard)
+        if DISPLAY_LEADERBOARD_EACH_ROUND:
+            tournament_print(leaderboard)
+
+    if not DISPLAY_LEADERBOARD_EACH_ROUND:
+        tournament_print(leaderboard)
 
     for player in players:
         player.save_model()
