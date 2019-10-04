@@ -23,15 +23,29 @@ python example/sample.opponent.py
 Inside the environment there are a couple of sample players provided:  
 * **RandomPlayer**: as name suggests it only does random moves, although valid ones  
 * **SavedPlayer**: loads a saved model and uses it to play  
-  
+
+#### Sample code  
+```python
+import gym
+from gym_connect_four import RandomPlayer, ConnectFourEnv
+env: ConnectFourEnv = gym.make("ConnectFour-v0")
+
+player1 = RandomPlayer(env, 'Dexter-Bot')
+player2 = RandomPlayer(env, 'Deedee-Bot')
+result = env.run(player1, player2, render=True)
+reward = result.value
+print(reward)
+```
 Inside the repo there are a couple of examples:  
 * **sample_nn**: Neural Network implementation identical to the one from CartPole playing against a random opponent  
-* **sample_opponent**: Simple random vs random  
-* **sample_two_players**: Using two defined players, without relying on the opponent feature in the environment  
   
 Considerations for the environment:  
-* the ```reset``` function is the one that assigns the opponent and must be specified each time, unless both players are handled by user (as in sample_two_players)  
-* the environment will throw an exception on invalid move, please use either ```env.is_valid_action(action)``` or pick the move from ```env.available_moves```
+  
+* the environment will throw an exception on invalid move, please use either ```env
+.is_valid_action(action)``` or pick the move from ```env.available_moves()```
+* Player gets the board through `get_next_action()` and `learn()` publicly exposed methods. **Every**
+ player sees its discs **encoded with 1**, **regardless** his turn order in the game. In this way
+ , the same NN model can be used as Player1 or as Player2 without needing to adjust board encoding.
 
 ### Assignment  
   
