@@ -3,12 +3,14 @@ import warnings
 from collections import deque
 
 import gym
-from gym_connect_four import RandomPlayer, ConnectFourEnv, Player, SavedPlayer
-
 import numpy as np
 from keras.layers import Dense, Flatten
 from keras.models import Sequential
 from keras.optimizers import Adam
+from tqdm import tqdm
+
+from envs.connect_four_env import ResultType
+from gym_connect_four import RandomPlayer, ConnectFourEnv, Player
 
 ENV_NAME = "ConnectFour-v0"
 TRAIN_EPISODES = 100
@@ -86,7 +88,7 @@ class NNPlayer(Player):
                 return action
         raise Exception('Unable to determine a valid move! Maybe invoke at the wrong time?')
 
-    def learn(self, state, action, reward, state_next, done) -> None:
+    def learn(self, state, action, state_next, reward, done) -> None:
         state = np.reshape(state, [1] + list(self.observation_space))
         state_next = np.reshape(state_next, [1] + list(self.observation_space))
 
@@ -100,8 +102,8 @@ class NNPlayer(Player):
         self.dqn_solver.save_model(self.name)
 
 
-def game():
-    env = gym.make(ENV_NAME)
+def game(show_boards=False):
+    env: ConnectFourEnv = gym.make(ENV_NAME)
 
     player = NNPlayer(env, 'NNPlayer')
     opponent = RandomPlayer(env, 'OpponentRandomPlayer')
@@ -110,52 +112,40 @@ def game():
     wins = 0
     losses = 0
     draws = 0
-    run = 0
-    while True:
-        run += 1
-        state = env.reset(opponent=opponent, player_color=1)
-        step = 0
-        while True:
-            step += 1
-            # env.render()
-            action = player.get_next_action(state)
+    for run in tqdm(range(1, TRAIN_EPISODES + 1)):
+        env.reset()
+        result = env.run(player, opponent, render=False)
+        reward = result.value
+        total_reward += reward
 
-            state_next, reward, terminal, info = env.step(action)
+        wins += max(0, result.value)
+        losses += max(0, -result.value)
+        draws += (abs(result.value) + 1) % 2
 
-            player.learn(state, action, reward, state_next, terminal)
+        if show_boards:
+            print("Run: " + str(run) + ", score: " + str(reward))
+            if hasattr(player, 'dqn_solver'):
+                print("exploration: " + str(player.dqn_solver.exploration_rate))
+            if result == ResultType.WIN1:
+                print(f"winner: {player.name}")
+                print("board state:\n", env.board)
+                print(f"reward={reward}")
+            elif result == ResultType.WIN2:
+                print(f"lost to: {opponent.name}")
+                print("board state:\n", env.board)
+                print(f"reward={reward}")
+            elif result == ResultType.DRAW:
+                print(f"draw after {player.name} move")
+                print("board state:\n", env.board)
+                print(f"reward={reward}")
+            else:
+                raise ValueError("Unknown result type")
+    print(f"Wins [{wins}], Draws [{draws}], Losses [{losses}] - Total reward {total_reward}, average reward {total_reward / TRAIN_EPISODES}")
 
-            state = state_next
-
-            if terminal:
-                total_reward += reward
-                print("Run: " + str(run) + ", score: " + str(reward))
-                if hasattr(player, 'dqn_solver'):
-                    print("exploration: " + str(player.dqn_solver.exploration_rate))
-                if reward == 1:
-                    wins += 1
-                    print(f"winner: {player.name}")
-                    print("board state:\n", state)
-                    print(f"reward={reward}")
-                elif reward == env.LOSS_REWARD:
-                    losses += 1
-                    print(f"lost to: {env.opponent.name}")
-                    print("board state:\n", state)
-                    print(f"reward={reward}")
-                elif reward == env.DRAW_REWARD:
-                    draws += 1
-                    print(f"draw after {player.name} move")
-                    print("board state:\n", state)
-                    print(f"reward={reward}")
-                print(f"Wins [{wins}], Draws [{draws}], Losses [{losses}] - Total reward {total_reward}, average reward {total_reward/run}")
-                break
-
-        if run == TRAIN_EPISODES:
-            if hasattr(player, 'save_model') and callable(player.save_model):
-                player.save_model()
-            break
+    player.save_model()
 
 
 if __name__ == "__main__":
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        game()
+        game(False)

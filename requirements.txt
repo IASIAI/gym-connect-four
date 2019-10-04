@@ -4,3 +4,4 @@ scikit-image==0.14.5
 tensorflow>=1.10.0
 Pillow
 pygame
+tqdm

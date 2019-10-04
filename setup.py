@@ -10,5 +10,6 @@ setup(name='gym_connect_four',
                         'keras',
                         'h5py',
                         'Pillow',
-                        'pygame']
+                        'pygame',
+                        'tqdm']
       )
