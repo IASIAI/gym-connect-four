@@ -9,5 +9,6 @@ setup(name='gym_connect_four',
                         'scikit-image==0.14.5',
                         'keras',
                         'tensorflow',
-                        'h5py']
+                        'h5py',
+                        'pygame=1.9.6']
       )

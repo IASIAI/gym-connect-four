@@ -20,7 +20,7 @@ class Player(ABC):
     def get_next_action(self, state: np.ndarray) -> int:
         pass
 
-    def learn(self, state, action: int, state_next, reward: int, done: int) -> None:
+    def learn(self, state, action: int, state_next, reward: int, done: bool) -> None:
         pass
 
     def save_model(self, model_prefix: str = None):
