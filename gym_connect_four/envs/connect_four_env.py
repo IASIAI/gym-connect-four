@@ -25,22 +25,36 @@ class Player(ABC):
     def get_next_action(self, state: np.ndarray) -> int:
         pass
 
-    def learn(self, state, action, state_next, reward, done) -> None:
+    def learn(self, state, action: int, state_next, reward: int, done: bool) -> None:
         pass
 
-    def reset(self):
-        pass
-
-    def save_model(self):
+    def save_model(self, model_prefix: str = None):
         raise NotImplementedError()
+
+    def load_model(self, model_prefix: str = None):
+        raise NotImplementedError()
+
+    def reset(self, episode: int = 0, side: int = 1) -> None:
+        """
+        Allows a player class to reset it's state before each round
+
+            Parameters
+            ----------
+            episode : which episode we have reached
+            side : 1 if the player is starting or -1 if the player is second
+        """
+        pass
 
 
 class RandomPlayer(Player):
     def __init__(self, env: 'ConnectFourEnv', name='RandomPlayer', seed: Optional[Hashable] = None):
         super().__init__(env, name)
-        random.seed(seed)
+        self._seed = seed
         # For reproducibility of the random
+        prev_state = random.getstate()
+        random.seed(self._seed)
         self._state = random.getstate()
+        random.setstate(prev_state)
 
     def get_next_action(self, state: np.ndarray) -> int:
         available_moves = self.env.available_moves()
@@ -54,6 +68,11 @@ class RandomPlayer(Player):
         self._state = random.getstate()
         random.setstate(prev_state)
         return action
+
+    def reset(self, episode: int = 0, side: int = 1) -> None:
+        # For reproducibility of the random
+        random.seed(self._seed)
+        self._state = random.getstate()
 
 
 class SavedPlayer(Player):
@@ -144,7 +163,8 @@ class ConnectFourEnv(gym.Env):
             elif self.res_type is ResultType.DRAW:
                 return ConnectFourEnv.DRAW_REWARD
             else:
-                return {ResultType.WIN1.value: ConnectFourEnv.WIN_REWARD, ResultType.WIN2.value: ConnectFourEnv.LOSS_REWARD}[self.res_type.value * player]
+                return {ResultType.WIN1.value: ConnectFourEnv.WIN_REWARD, ResultType.WIN2.value: ConnectFourEnv.LOSS_REWARD}[
+                    self.res_type.value * player]
 
         def is_done(self):
             return self.res_type != ResultType.NONE

@@ -9,8 +9,7 @@ from keras.models import Sequential
 from keras.optimizers import Adam
 from tqdm import tqdm
 
-from envs.connect_four_env import ResultType
-from gym_connect_four import RandomPlayer, ConnectFourEnv, Player
+from gym_connect_four import RandomPlayer, ConnectFourEnv, Player, ResultType
 
 ENV_NAME = "ConnectFour-v0"
 TRAIN_EPISODES = 100

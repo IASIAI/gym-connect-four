@@ -1,7 +1,9 @@
-numpy==0.16.1
-gym
-scikit-image==0.14.5
-tensorflow>=1.10.0
+gym>=0.14
+numpy>=1.17.0
+tensorflow>=2.0.0
+scikit-image>=0.14.5
+keras>=2.3.0
+h5py
 Pillow
-pygame
+pygame>=1.9.6
 tqdm
