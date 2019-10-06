@@ -74,6 +74,9 @@ class RandomPlayer(Player):
         random.seed(self._seed)
         self._state = random.getstate()
 
+    def save_model(self, model_prefix: str = None):
+        pass
+
 
 class SavedPlayer(Player):
     def __init__(self, env, name='SavedPlayer', model_prefix=None):
