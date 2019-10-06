@@ -150,7 +150,7 @@ class TestConnectFourEnv(TestCase):
         moves2 = [2 * i % act_space for i in range(1, 100)]
         p1 = DeterministicPlayer(env=env, moves=moves1, name="P1")
         p2 = DeterministicPlayer(env=env, moves=moves2, name="P2")
-        res = env.run(p1, p2)
+        res = env.run(p1, p2, None)
         self.assertEqual(ResultType.WIN1.value, res.value)
         self.assertEqual(moves1[:11], p1.action_log)
         self.assertEqual(moves2[:10], p2.action_log)
@@ -180,7 +180,7 @@ class TestConnectFourEnv(TestCase):
         moves2 = [(2 * i + 1) % act_space for i in range(0, 100)]
         p1 = DeterministicPlayer(env=env, moves=moves1, name="P1")
         p2 = DeterministicPlayer(env=env, moves=moves2, name="P2")
-        res = env.run(p1, p2)
+        res = env.run(p1, p2, None)
         self.assertEqual(ResultType.WIN2.value, res.value)
         self.assertListEqual(moves1[:11], p1.action_log)
         self.assertListEqual(moves2[:11], p2.action_log)
@@ -196,7 +196,7 @@ class TestConnectFourEnv(TestCase):
         moves2 = [(2 * i + 1) % act_space for i in range(0, 100)]
         p1 = RandomPlayer(env=env, name="P1", seed=88)
         p2 = DeterministicPlayer(env=env, moves=moves2, name="P2")
-        res = env.run(p1, p2)
+        res = env.run(p1, p2, None)
         self.assertEqual(ResultType.DRAW.value, res.value)
         self.assertEqual([1, 3, 5, 0, 2, 4, 6, 1, 3, 5, 0, 2, 4, 6, 1, 3, 5, 0, 3, 4, 4], p2.action_log)
         self.assertEqual([ConnectFourEnv.DEF_REWARD] * 20 + [ConnectFourEnv.DRAW_REWARD], p2.reward_log)
@@ -204,7 +204,7 @@ class TestConnectFourEnv(TestCase):
 
     def test_reset(self):
         env = self.env
-        env.run(RandomPlayer(env=env, seed=0), RandomPlayer(env=env, seed=1))
+        env.run(RandomPlayer(env=env, seed=0), RandomPlayer(env=env, seed=1), None)
         sum_steps = np.sum(np.sum(np.absolute(env.board)))
         self.assertEqual(17, sum_steps)
         env.reset()

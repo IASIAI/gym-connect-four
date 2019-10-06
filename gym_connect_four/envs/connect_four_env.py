@@ -189,10 +189,10 @@ class ConnectFourEnv(gym.Env):
         self.__window_height = window_height
         self.__rendered_board = self._update_board_render()
 
-    def run(self, player1: Player, player2: Player, render=False) -> ResultType:
+    def run(self, player1: Player, player2: Player, board: Optional[np.ndarray] = None, render=False) -> ResultType:
         player1.reset()
         player2.reset()
-        self.reset()
+        self.reset(board)
 
         cp = lambda: self.__current_player
 
@@ -248,7 +248,6 @@ class ConnectFourEnv(gym.Env):
             if self.__board[index][action] == 0:
                 self.__board[index][action] = self.__current_player
                 break
-
 
         # Check if board is completely filled
         if np.count_nonzero(self.__board[0]) == self.board_shape[1]:

@@ -13,5 +13,6 @@ setup(name='gym_connect_four',
                         'h5py',
                         'Pillow',
                         'pygame>=1.9.6',
-                        'tqdm']
+                        'tqdm',
+                        'plotly']
       )
