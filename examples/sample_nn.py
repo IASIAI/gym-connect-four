@@ -12,7 +12,7 @@ from keras.layers import Dense, Flatten
 from keras.models import Sequential
 from keras.optimizers import Adam
 
-from gym_connect_four import RandomPlayer, ConnectFourEnv, Player, ResultType
+from gym_connect_four import ConnectFourEnv, Player, ResultType, SavedPlayer
 
 ENV_NAME = "ConnectFour-v0"
 TRAIN_EPISODES = 100000
@@ -44,11 +44,12 @@ PLOT_REFRESH = 50
 
 class ScoreLogger:
 
-    def __init__(self, env_name):
+    def __init__(self, env_name, success_rounds=20):
         self.scores = deque(maxlen=CONSECUTIVE_RUNS_TO_SOLVE)
         self.averages = deque(maxlen=CONSECUTIVE_RUNS_TO_SOLVE)
         self.last_20_avg = deque(maxlen=CONSECUTIVE_RUNS_TO_SOLVE)
-        self.last20_scores = deque(maxlen=20)
+        self._N = success_rounds
+        self.last20_scores = deque(maxlen=success_rounds)
         self.exp_rates = deque(maxlen=CONSECUTIVE_RUNS_TO_SOLVE)
         self.time_hist = deque(maxlen=CONSECUTIVE_RUNS_TO_SOLVE)
         self.t1 = time.time()
@@ -64,7 +65,7 @@ class ScoreLogger:
         self.fig = make_subplots(specs=[[{"secondary_y": True}]])
         self.fig.add_trace(go.Scatter(x=y.index, y=y.score, name="score"))
         self.fig.add_trace(go.Scatter(x=y.index, y=y.m, name="mean"))
-        self.fig.add_trace(go.Scatter(x=y.index, y=y.m20, name="mean_last20"))
+        self.fig.add_trace(go.Scatter(x=y.index, y=y.m20, name=f"mean_last{self._N}"))
         self.fig.add_trace(go.Scatter(x=y.index, y=y.expl, name="expl"))
         self.fig.add_trace(go.Scatter(x=y.index, y=y.time, name="time"), secondary_y=True)
         self.fig.show()
@@ -96,7 +97,7 @@ class ScoreLogger:
                              columns=['score', 'm', 'm20', 'expl', 'time'])
 
             threading.Thread(target=self.show_graph, args=(y,)).start()
-        print(f"Run {run:3}: (avg: {mean_score:2.3f}, last20_avg: {last_20mean:2.3f}, expl: {exploration_rate:1.3}, "
+        print(f"Run {run:3}: (avg: {mean_score:2.3f}, last{self._N}_avg: {last_20mean:2.3f}, expl: {exploration_rate:1.3}, "
               f"mem_sz: {memory_size!s}, time: {td:3.1})\n")
         if mean_score >= AVERAGE_SCORE_TO_SOLVE and len(self.scores) >= CONSECUTIVE_RUNS_TO_SOLVE:
             solve_score = run - CONSECUTIVE_RUNS_TO_SOLVE
@@ -212,6 +213,9 @@ class DQNSolver:
         if len(self.memory) < self.BATCH_SIZE:
             return
         batch = random.sample(self.memory, self.BATCH_SIZE)
+        batch[-1] = self.memory[-1]
+        if self.BATCH_SIZE > 1:
+            batch[-2] = self.memory[-1]
         if not self.isFit:
             states = list(map(lambda _: _[0][0], batch))
             states = np.array(states)
@@ -238,13 +242,15 @@ class NNPlayer(Player):
         self.action_space = env.action_space.n
 
         self.dqn_solver = DQNSolver(self.observation_space, self.action_space)
-        self.sl = ScoreLogger(str(self.__class__))
+
         self._N = 30
-        self._STOP_THRESHOLD = 0.9
+        self.sl = ScoreLogger(str(self.__class__), success_rounds=self._N)
+        self._STOP_THRESHOLD = 0.8  # 0.86- with RP
         self._last_N_rounds = deque(maxlen=self._N)
         self._round = 0
         self._score = 0
         self._total_score = 0
+        self._max_avg_score = -100
 
     def get_next_action(self, state: np.ndarray) -> int:
         state = np.reshape(state, [1] + list(self.observation_space))
@@ -253,7 +259,14 @@ class NNPlayer(Player):
             return action
 
     def _stop_learn_condition(self):
-        return len(self._last_N_rounds) == self._N and mean(self._last_N_rounds) >= self._STOP_THRESHOLD
+        if len(self._last_N_rounds) < self._N:
+            return False
+        avg = mean(self._last_N_rounds)
+        if avg > self._max_avg_score:
+            self.save_model()
+            self._max_avg_score = avg
+            print(f"\n---------------New max_score {avg}. Saving model.")
+        return avg >= self._STOP_THRESHOLD
 
     def learn(self, state, action, state_next, reward, done) -> None:
         if self._stop_learn_condition():
@@ -291,7 +304,7 @@ def game(show_boards=False):
     draws = 0
     for run in range(1, TRAIN_EPISODES + 1):
         random.shuffle(players)
-        result = env.run(*players, None, render=False)
+        result = env.run(*players, board=None, render=False)
         reward = result.value
         total_reward += reward
 
