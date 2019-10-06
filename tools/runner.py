@@ -3,9 +3,10 @@ import importlib
 import os.path
 import random
 import sys
-from typing import List
+from typing import List, Iterable
 
 import gym
+import numpy as np
 
 from gym_connect_four import RandomPlayer, SavedPlayer, ConnectFourEnv, Player
 
@@ -13,6 +14,7 @@ env: ConnectFourEnv = gym.make("ConnectFour-v0")
 ROUNDS = 50
 LEARNING = True
 DISPLAY_LEADERBOARD_EACH_ROUND = True
+DISPLAY_EACH_MATCH_RESULTS = False
 
 
 def tournament_player_loader(model: str):
@@ -36,10 +38,22 @@ def play_game(player1, player2, rounds=ROUNDS) -> List[int]:
 
     results = [0] * 3
     for episode in range(rounds):
-        result = env.run(player1, player2)
+        result = env.run(player1, player2, None)
         match_result: int = result.value  # 1 = win, 0 = draw, -1 = loss
         results[1 - match_result] += 1
         print(f"{player1.name}:{player2.name}={results}")
+
+    return results
+
+
+def play_competition_game(player1: Player, player2: Player, boards: Iterable[np.ndarray]) -> List[int]:
+    results = [0] * 3
+    for board in boards:
+        result = env.run(player1, player2, board=board.copy())
+        match_result: int = result.value  # 1 = win, 0 = draw, -1 = loss
+        results[1 - match_result] += 1
+        if DISPLAY_EACH_MATCH_RESULTS:
+            print(f"{player1.name}:{player2.name}={results}")
 
     return results
 
@@ -80,6 +94,21 @@ def tournament_score(score):
     return (score[0][0] - score[0][2]) + (score[1][0] - score[1][2])
 
 
+def board_generator(board_shape=(6, 7)):
+    for p1_act in range(7):
+        for p2_act in range(7):
+            board = np.zeros(board_shape, dtype=int)
+            for index in list(reversed(range(board_shape[0]))):
+                if board[index][p1_act] == 0:
+                    board[index][p1_act] = 1
+                    break
+            for index in list(reversed(range(board_shape[0]))):
+                if board[index][p2_act] == 0:
+                    board[index][p2_act] = -1
+                    break
+            yield board
+
+
 def tournament(players: List[Player], save_models: bool = False):
     game_list = []
     leaderboard = {}
@@ -94,8 +123,8 @@ def tournament(players: List[Player], save_models: bool = False):
     random.shuffle(game_list)
 
     for player1, player2 in game_list:
-        score = play_game(player1, player2, ROUNDS)
-        print(score)
+        score = play_competition_game(player1, player2, board_generator())
+        print(f"{player1.name}:{player2.name}:{score!s}")
 
         p1 = player1.name
         p2 = player2.name
@@ -142,5 +171,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # tournament([RandomPlayer(env, name="R1", seed=0), RandomPlayer(env, name="R2", seed=0), SavedPlayer(env, "NNPlayer")])
+    #main()
+    # Next line is to run tournament with customized Random players
+    tournament([RandomPlayer(env, name="R1", seed=0), RandomPlayer(env, name="R2", seed=None), SavedPlayer(env, "NNPlayer")])
