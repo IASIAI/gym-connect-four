@@ -2,6 +2,7 @@ import random
 from abc import ABC, abstractmethod
 from collections import deque
 from enum import Enum, unique
+from operator import itemgetter
 from typing import Tuple, NamedTuple, Hashable, Optional
 
 import gym
@@ -92,19 +93,10 @@ class SavedPlayer(Player):
 
     def get_next_action(self, state: np.ndarray) -> int:
         state = np.reshape(state, [1] + list(self.observation_space))
-        for _ in range(100):
-            q_values = self.model.predict(state)
-            q_values = np.array([[
-                x if idx in self.env.available_moves() else -10
-                for idx, x in enumerate(q_values[0])
-            ]])
-            action = np.argmax(q_values[0])
-            if self.env.is_valid_action(action):
-                return action
-
-        raise Exception(
-            'Unable to determine a valid move! Maybe invoke at the wrong time?'
-        )
+        q_values = self.model.predict(state)[0]
+        vs = [(i, q_values[i]) for i in self.env.available_moves()]
+        act = max(vs, key=itemgetter(1))
+        return act[0]
 
 
 @unique

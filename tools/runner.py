@@ -9,12 +9,14 @@ import gym
 import numpy as np
 
 from gym_connect_four import RandomPlayer, SavedPlayer, ConnectFourEnv, Player
+from tools.AlexLungu import AlexLunguPlayer
+from tools.ValiRosca import ValiRoscaPlayer
 
 env: ConnectFourEnv = gym.make("ConnectFour-v0")
 ROUNDS = 50
 LEARNING = True
 DISPLAY_LEADERBOARD_EACH_ROUND = True
-DISPLAY_EACH_MATCH_RESULTS = False
+DISPLAY_EACH_MATCH_RESULTS = True
 
 
 def tournament_player_loader(model: str):
@@ -54,6 +56,7 @@ def play_competition_game(player1: Player, player2: Player, boards: Iterable[np.
         results[1 - match_result] += 1
         if DISPLAY_EACH_MATCH_RESULTS:
             print(f"{player1.name}:{player2.name}={results}")
+            env.render("console", close=False)
 
     return results
 
@@ -85,7 +88,7 @@ def tournament_print(leaderboard):
                        item[1][1][0], item[1][1][1], item[1][1][2],
                        item[1][2][0], item[1][2][1], item[1][2][2],
                        item[1][3][0], item[1][3][1], item[1][3][2]
-                       ))
+                       ), flush=True)
     pass
 
 
@@ -116,13 +119,18 @@ def tournament(players: List[Player], save_models: bool = False):
     for player1 in players:
         leaderboard[player1.name] = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], 0]
         for player2 in players:
-            if player1 == player2:
+            if id(player1) == id(player2):
                 continue
             game_list.append((player1, player2))
 
-    random.shuffle(game_list)
+    # random.shuffle(game_list)
 
-    for player1, player2 in game_list:
+    def diff_score(i: int):
+        p1, p2 = game_list[i]
+        p1, p2 = p1.name, p2.name
+        return abs(leaderboard[p1][4]) + abs(leaderboard[p2][4])
+
+    def play_match(player1, player2):
         score = play_competition_game(player1, player2, board_generator())
         print(f"{player1.name}:{player2.name}:{score!s}")
 
@@ -142,6 +150,14 @@ def tournament(players: List[Player], save_models: bool = False):
 
         if DISPLAY_LEADERBOARD_EACH_ROUND:
             tournament_print(leaderboard)
+
+    while game_list:
+        i = min(range(len(game_list)), key=diff_score)
+        player1, player2 = game_list.pop(i)
+        play_match(player1, player2)
+
+    # for player1, player2 in tqdm(game_list):
+    #     play_match(player1, player2)
 
     if not DISPLAY_LEADERBOARD_EACH_ROUND:
         tournament_print(leaderboard)
@@ -165,12 +181,25 @@ def main():
 
     players = [tournament_player_loader(model) for model in args.models]
 
-    print("Loaded", len(players), "players :", ", ".join([player.name for player in players]))
+    print("Loaded", len(players), "players :", ", ".join([player.name for player in players]), flush=True)
 
     tournament(players)
 
 
 if __name__ == "__main__":
-    #main()
+    # main()
     # Next line is to run tournament with customized Random players
-    tournament([RandomPlayer(env, name="R1", seed=0), RandomPlayer(env, name="R2", seed=None), SavedPlayer(env, "NNPlayer")])
+    f = open("tournament.log","wt")
+    sys.stdout = f
+    tournament([
+        SavedPlayer(env, "Alexandra1"),
+        AlexLunguPlayer(env, name="AlexLungu"),
+        SavedPlayer(env, "andrei_gherghel"),
+        SavedPlayer(env, "Diana"),
+        SavedPlayer(env, "Oriana"),
+        SavedPlayer(env, "StefanTomsa"),
+        SavedPlayer(env, "TabarceaAugustus"),
+        SavedPlayer(env, "tamariei"),
+        SavedPlayer(env, "Vlada"),
+        ValiRoscaPlayer(env, "ValiRosca")
+    ])
