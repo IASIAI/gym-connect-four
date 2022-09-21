@@ -141,7 +141,7 @@ class ConnectFourEnv(gym.Env):
         An attempt is made to place a piece in an invalid location
     """
 
-    metadata = {'render.modes': ['human']}
+    metadata = {'render.modes': ['human', 'rgb_array', 'console']}
 
     LOSS_REWARD = -1
     DEF_REWARD = 0
@@ -302,11 +302,16 @@ class ConnectFourEnv(gym.Env):
             self.__screen.blit(surface, (0, 0))
 
             pygame.display.update()
+        elif mode == 'rgb_array':
+            self.__rendered_board = self._update_board_render()
+            frame = self.__rendered_board
+            return np.flip(frame, axis=(0, 1))
         else:
             raise error.UnsupportedMode()
 
     def close(self) -> None:
         pygame.quit()
+        self.__screen = None
 
     def is_valid_action(self, action: int) -> bool:
         return self.__board[0][action] == 0
